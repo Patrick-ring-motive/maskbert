@@ -39,6 +39,7 @@
     async function run() {
       const text = document.getElementById('text').value;
       const inputIdsArray = tokenize(text);
+      console.log({inputIdsArray});
       const inputIds = tf.tensor([inputIdsArray], undefined, 'int32');
       const attentionMask = tf.tensor([inputIdsArray.map(() => 1)], undefined, 'int32');
 
@@ -46,10 +47,15 @@
         'input_ids': inputIds,
         'attention_mask': attentionMask
       });
-
-      const logits = result.arraySync()[0]; // [seq_len, vocab_size]
+      const resultArray = result.arraySync();
+      console.log({resultArray});
+      const logits = resultArray[0]; // [seq_len, vocab_size]
       const maskIndex = inputIdsArray.indexOf(maskId);
-      const maskLogits = logits[maskIndex] || logits[0]; // fallback if not found
+      let maskLogits = logits[maskIndex]; 
+      if(!maskLogits){
+        console.log(`${maskIndex} not found`);
+        maskLogits = logits[0];// fallback if not found
+      }
 
       const top5 = [...maskLogits.map((score, id) => ({ id, score }))]
         .sort((a, b) => b.score - a.score)
@@ -57,7 +63,7 @@
         .map(({ id, score }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
         .join('\n');
 
-      document.getElementById('output').textContent = top;
+      document.getElementById('output').textContent = top5;
     }
 
     loadModel();
