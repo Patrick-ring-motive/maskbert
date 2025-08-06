@@ -140,12 +140,14 @@
             document.getElementById('output').textContent = top5;
           } catch (e) {
             document.getElementById('output').textContent = e.message;
+            console.error(e);
           }
         }
 
         document.getElementById('predict').addEventListener('click', run);
       } catch (e) {
         document.getElementById('output').textContent = e.message;
+        console.error(e);
       }
 
     })();
