@@ -96,7 +96,7 @@
         // Minimal vocab
         const invVocab = await getVocab();
         const vocab = Object.fromEntries(Object.entries(invVocab).map(([k, v]) => [v, k]));
-        const vocabMap = new Map(invVocab.entries());
+    
 
         const tokenizer = new WordPieceTokenizer(invVocab);
 
@@ -118,7 +118,7 @@
             await loaded;
             const text = document.getElementById('text').value;
             const tokens = tokenize(text);
-            const inputIdsArray = tokens.map(x => invVocab[x]);
+            const inputIdsArray = tokens.map(x => vocab[x]);
             console.log({ inputIdsArray });
             const inputIds = tf.tensor([inputIdsArray], undefined, 'int32');
             const attentionMask = tf.tensor([inputIdsArray.map(() => 1)], undefined, 'int32');
