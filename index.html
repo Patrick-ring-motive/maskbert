@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DistilBERT Masked Fill - Pure TF.js</title>
+</head>
+<body>
+  <h1>DistilBERT Masked Fill (TF.js WebGL)</h1>
+  <input id="text" size="60" value="The capital of France is [MASK]." />
+  <button onclick="run()">Predict</button>
+  <pre id="output">Loading...</pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
+  <script>
+    let model;
+    const maskToken = '[MASK]';
+    const maskId = 103; // hardcoded from BERT vocab for [MASK] in WordPiece
+
+    // Dummy WordPiece vocab and tokenizer replacement
+    const vocab = {
+      "the": 1996, "capital": 3007, "of": 1997, "france": 2605,
+      "is": 2003, ".": 1012, "[MASK]": maskId, "[CLS]": 101, "[SEP]": 102
+    };
+    const invVocab = Object.entries(vocab).reduce((o, [k, v]) => (o[v] = k, o), {});
+
+    function tokenize(text) {
+      return ["[CLS]", ...text.toLowerCase().split(' '), "[SEP]"]
+        .map(token => vocab[token] ?? 100) // 100 = [UNK]
+    }
+
+    async function loadModel() {
+      tf.setBackend('webgl');
+      await tf.ready();
+      model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
+      document.getElementById('output').textContent = 'Model loaded.';
+    }
+
+    async function run() {
+      const text = document.getElementById('text').value;
+      const inputIds = tokenize(text);
+      const inputTensor = tf.tensor([inputIds], [1, inputIds.length], 'int32');
+
+      const result = model.execute({ 'input_ids': inputTensor });
+      const logits = result.arraySync()[0]; // shape: [seq_len, vocab_size]
+
+      // Find mask position
+      const maskIndex = inputIds.indexOf(maskId);
+      const topLogits = logits[maskIndex];
+
+      // Get top 5 predictions
+      const top = [...topLogits.map((score, id) => ({ id, score }))]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(({ id, score }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
+        .join('\n');
+
+      document.getElementById('output').textContent = top;
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
