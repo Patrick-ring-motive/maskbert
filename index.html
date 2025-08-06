@@ -94,7 +94,7 @@
         const vocab = Object.fromEntries(Object.entries(invVocab).map(([k, v]) => [v, k]));
     
 
-        const tokenizer = new WordPieceTokenizer(invVocab);
+        const tokenizer = new WordPieceTokenizer(vocab);
 
         function tokenize(text) {
           return tokenizer.tokenize(text);
