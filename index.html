@@ -97,8 +97,8 @@
         const invVocab = await getVocab();
         console.log({invVocab});
         const vocab = {};
-        for(const [k,v] of invVocab.entries()){
-          vocab[v] = k;
+        for(let i = 0;i<invVocab.length;i++){
+          vocab[invVocab[i]] = i;
         }
         console.log({vocab});
 
