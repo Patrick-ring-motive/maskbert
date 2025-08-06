@@ -43,7 +43,10 @@
       document.getElementById('output').textContent = 'Model loaded.';
     }
 
+    const loaded = loadModel();
+  
     async function run() {
+      await loaded();
       const text = document.getElementById('text').value;
       const inputIdsArray = tokenize(text);
       console.log({inputIdsArray});
@@ -74,7 +77,7 @@
 
     document.getElementById('predict').addEventListener('click',run);
 
-    loadModel();
+    
 })();
   </script>
 </body>
