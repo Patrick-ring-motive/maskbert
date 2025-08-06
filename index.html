@@ -20,6 +20,8 @@
      tf.ENV.flags.HAS_WEBGL=true;
      tf.ENV.flags.WEBGL_VERSION=2;
      tf.ENV.flags.SOFTWARE_WEBGL_ENABLED = true;
+     tf.ENV.flags.IS_SAFARI = false;
+    
      tf.setBackend('webgl')
      class WordPieceTokenizer {
           constructor(vocabulary, unknownToken = '[UNK]', suffixIndicator = '##') {
@@ -109,10 +111,23 @@
         }
 
         async function loadModel() {
-          tf.setBackend('webgl');
-          await tf.ready();
-          model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
-          document.getElementById('output').textContent = 'Model loaded.';
+          try{
+            tf.setBackend('webgl');
+            await tf.ready();
+            model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
+            document.getElementById('output').textContent = 'Model loaded.';
+          } catch (e) {
+            document.getElementById('output').textContent += '\n' + e.message;
+            console.error(e);
+            try{
+              tf.setBackend('cpu');
+              await tf.ready();
+              model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
+              document.getElementById('output').textContent = 'Model loaded.';
+            } catch (e) {
+              document.getElementById('output').textContent += '\n' + e.message;
+              console.error(e);
+            }
         }
 
         const loaded = loadModel();
