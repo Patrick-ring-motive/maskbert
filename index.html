@@ -18,7 +18,7 @@
     }
 
     const getVocab = async()=>{
-      let text = String(await fetchText('vocab.txt')).split('\n');
+      let text = String(await fetchText('vocab.txt'));
       text = `${text}\n${text.toLowerCase()}`;
       return [...new Set(text.split('\n').map(x=>x.trim()).filter(x=>x))];
     };
