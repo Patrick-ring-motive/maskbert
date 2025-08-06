@@ -15,13 +15,19 @@
     async function fetchText(){
       return await(await fetch(...arguments)).text();
     }
+
+    const getVocab = async()=>{
+      let text = String(await fetchText('vocab.txt')).split('\n');
+      text = `${text}\n${text.toLowerCase()}`;
+      return [...new Set(text.split('\n').map(x=>x.trim()).filter(x=>x))];
+    };
     
     let model;
     const maskToken = '[MASK]';
     const maskId = 103; // BERT base uncased and DistilBERT use 103 for [MASK]
 
     // Minimal vocab
-    const vocab = String(await fetchText('vocab.txt')).split('\n');
+    const vocab = await getVocab();
     const invVocab = Object.fromEntries(Object.entries(vocab).map(([k, v]) => [v, k]));
 
     function tokenize(text) {
