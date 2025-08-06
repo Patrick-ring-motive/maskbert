@@ -91,7 +91,7 @@
 
         // Minimal vocab
         const invVocab = await getVocab();
-        const vocab = Object.fromEntries(Object.entries(vocab).map(([k, v]) => [v, k]));
+        const vocab = Object.fromEntries(Object.entries(invVocab).map(([k, v]) => [v, k]));
         const vocabMap = new Map(invVocab.entries());
 
         const tokenizer = new WordPieceTokenizer(invVocab);
