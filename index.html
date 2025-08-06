@@ -12,15 +12,11 @@
   <button id="predict">Predict</button>
   <pre id="output">Loading...</pre>
 
- <!-- Import @tensorflow/tfjs-core -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@2.0.0-rc.4/dist/tf-core.es2017.js"></script>
-
-<!-- Adds the WebGL backend to the global backend registry -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@2.0.0-rc.4/dist/tf-backend-webgl.es2017.js"></script>
   <script>
     (async () => {
       try {
-
+        await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core");
+        await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl");
         class WordPieceTokenizer {
           constructor(vocabulary, unknownToken = '[UNK]', suffixIndicator = '##') {
             this.vocabulary = new Set(vocabulary);
