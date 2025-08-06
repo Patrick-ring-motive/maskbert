@@ -120,6 +120,7 @@
             document.getElementById('output').textContent += '\n' + e.message;
             console.error(e);
             try{
+              return;
               tf.setBackend('cpu');
               await tf.ready();
               model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
