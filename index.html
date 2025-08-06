@@ -12,6 +12,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
   <script>
+(async()=>{
     async function fetchText(){
       return await(await fetch(...arguments)).text();
     }
@@ -72,6 +73,7 @@
     }
 
     loadModel();
+})();
   </script>
 </body>
 </html>
