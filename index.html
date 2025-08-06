@@ -58,8 +58,7 @@
       }
 
       const top5 = [...maskLogits.map((score, id) => ({ id, score }))]
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
+        .sort((a, b) => b.score - a.score).filter(({ id })=>invVocab[id]).slice(0,5)
         .map(({ id, score }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
         .join('\n');
 
