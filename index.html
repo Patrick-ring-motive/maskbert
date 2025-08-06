@@ -35,18 +35,19 @@
       document.getElementById('output').textContent = 'Model loaded.';
     }
 
-    async function run() {
+   async function run() {
       const text = document.getElementById('text').value;
       const inputIds = tokenize(text);
+       const attentionMask = tf.tensor([inputIds], [1, inputIds.length], 'int32');
       const inputTensor = tf.tensor([inputIds], [1, inputIds.length], 'int32');
 
-      const result = model.execute({ 'input_ids': inputTensor });
+      const result = model.execute({ 'input_ids': inputTensor,attention_mask:attentionMask });
       const logits = result.arraySync()[0]; // shape: [seq_len, vocab_size]
 
       // Find mask position
       const maskIndex = inputIds.indexOf(maskId);
-      const topLogits = logits[maskIndex];
-
+      const topLogits = logits[maskIndex]??logits[0];
+      console.log(logits);
       // Get top 5 predictions
       const top = [...topLogits.map((score, id) => ({ id, score }))]
         .sort((a, b) => b.score - a.score)
