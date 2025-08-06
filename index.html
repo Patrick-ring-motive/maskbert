@@ -12,16 +12,16 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
   <script>
+    async function fetchText(){
+      return await(await fetch(...arguments)).text();
+    }
+    
     let model;
     const maskToken = '[MASK]';
     const maskId = 103; // BERT base uncased and DistilBERT use 103 for [MASK]
 
     // Minimal vocab
-    const vocab = {
-     "[cls]": 101, "[CLS]": 101, "[SEP]": 102,"[sep]": 102, "[MASK]": 103,"[mask]": 103, ".": 1012,
-      "the": 1996, "capital": 3007, "of": 1997, "france": 2605,
-      "is": 2003, "paris": 3000
-    };
+    const vocab = String(await fetchText('vocab.txt')).split('\n');
     const invVocab = Object.fromEntries(Object.entries(vocab).map(([k, v]) => [v, k]));
 
     function tokenize(text) {
