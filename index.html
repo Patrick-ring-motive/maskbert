@@ -14,18 +14,19 @@
   <script>
     let model;
     const maskToken = '[MASK]';
-    const maskId = 103; // hardcoded from BERT vocab for [MASK] in WordPiece
+    const maskId = 103; // BERT base uncased and DistilBERT use 103 for [MASK]
 
-    // Dummy WordPiece vocab and tokenizer replacement
+    // Minimal vocab
     const vocab = {
+      "[CLS]": 101, "[SEP]": 102, "[MASK]": 103, ".": 1012,
       "the": 1996, "capital": 3007, "of": 1997, "france": 2605,
-      "is": 2003, ".": 1012, "[MASK]": maskId, "[CLS]": 101, "[SEP]": 102
+      "is": 2003, "paris": 3000
     };
-    const invVocab = Object.entries(vocab).reduce((o, [k, v]) => (o[v] = k, o), {});
+    const invVocab = Object.fromEntries(Object.entries(vocab).map(([k, v]) => [v, k]));
 
     function tokenize(text) {
-      return ["[CLS]", ...text.toLowerCase().split(' '), "[SEP]"]
-        .map(token => vocab[token] ?? 100) // 100 = [UNK]
+      return ["[CLS]", ...text.toLowerCase().replaceAll('.', ' .').split(/\s+/), "[SEP]"]
+        .map(token => vocab[token] ?? 100); // 100 = [UNK]
     }
 
     async function loadModel() {
@@ -35,21 +36,22 @@
       document.getElementById('output').textContent = 'Model loaded.';
     }
 
-   async function run() {
+    async function run() {
       const text = document.getElementById('text').value;
-      const inputIds = tokenize(text);
-       const attentionMask = tf.tensor([inputIds], [1, inputIds.length], 'int32');
-      const inputTensor = tf.tensor([inputIds], [1, inputIds.length], 'int32');
+      const inputIdsArray = tokenize(text);
+      const inputIds = tf.tensor([inputIdsArray], undefined, 'int32');
+      const attentionMask = tf.tensor([inputIdsArray.map(() => 1)], undefined, 'int32');
 
-      const result = model.execute({ 'input_ids': inputTensor,attention_mask:attentionMask });
-      const logits = result.arraySync()[0]; // shape: [seq_len, vocab_size]
+      const result = await model.executeAsync({
+        'input_ids': inputIds,
+        'attention_mask': attentionMask
+      });
 
-      // Find mask position
-      const maskIndex = inputIds.indexOf(maskId);
-      const topLogits = logits[maskIndex]??logits[0];
-      console.log(logits);
-      // Get top 5 predictions
-      const top = [...topLogits.map((score, id) => ({ id, score }))]
+      const logits = result.arraySync()[0]; // [seq_len, vocab_size]
+      const maskIndex = inputIdsArray.indexOf(maskId);
+      const maskLogits = logits[maskIndex] || logits[0]; // fallback if not found
+
+      const top5 = [...maskLogits.map((score, id) => ({ id, score }))]
         .sort((a, b) => b.score - a.score)
         .slice(0, 5)
         .map(({ id, score }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
