@@ -13,6 +13,65 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
   <script>
 (async()=>{
+
+class WordPieceTokenizer {
+    constructor(vocabulary, unknownToken = '[UNK]', suffixIndicator = '##') {
+        this.vocabulary = new Set(vocabulary);
+        this.unknownToken = unknownToken;
+        this.suffixIndicator = suffixIndicator;
+    }
+
+    tokenize(text) {
+        const tokens = [];
+        // Normalize text and split into words, removing empty strings.
+        const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+
+        for (const word of words) {
+            let subwordTokens = [];
+            let remainingWord = word;
+            let isUnknown = false;
+
+            // Greedily find the longest matching subword
+            while (remainingWord.length > 0) {
+                let longestMatch = '';
+                let matchLength = 0;
+
+                for (let i = remainingWord.length; i > 0; i--) {
+                    let candidate = remainingWord.substring(0, i);
+                    
+                    // The first token of a word should not have the suffix indicator
+                    if (subwordTokens.length > 0) {
+                        candidate = this.suffixIndicator + candidate;
+                    }
+
+                    if (this.vocabulary.has(candidate)) {
+                        longestMatch = candidate;
+                        matchLength = i;
+                        break; // Found the longest match, move on
+                    }
+                }
+
+                if (longestMatch.length > 0) {
+                    subwordTokens.push(longestMatch);
+                    remainingWord = remainingWord.substring(matchLength);
+                } else {
+                    // No match found for the current remaining part of the word
+                    isUnknown = true;
+                    break;
+                }
+            }
+
+            if (isUnknown) {
+                tokens.push(this.unknownToken);
+            } else {
+                tokens.push(...subwordTokens);
+            }
+        }
+        return tokens;
+    }
+}
+
+
     async function fetchText(){
       return await(await fetch(...arguments)).text();
     }
@@ -31,9 +90,10 @@
     const vocab = await getVocab();
     const invVocab = Object.fromEntries(Object.entries(vocab).map(([k, v]) => [v, k]));
 
+    const tokenizer = new WordPieceTokenizer(vocab);
+
     function tokenize(text) {
-      return ["[CLS]", ...text.toLowerCase().replaceAll('.', ' .').split(/\s+/), "[SEP]"]
-        .map(token => vocab[token] ?? 100); // 100 = [UNK]
+      return tokenizer.tokenize(text);
     }
 
     async function loadModel() {
@@ -46,7 +106,7 @@
     const loaded = loadModel();
   
     async function run() {
-      await loaded();
+      await loaded;
       const text = document.getElementById('text').value;
       const inputIdsArray = tokenize(text);
       console.log({inputIdsArray});
