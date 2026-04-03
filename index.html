@@ -14,169 +14,189 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0"></script>
   <script>
     (async () => {
-      try {
-    //    await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core");
-     //   await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl");
-     tf.ENV.flags.HAS_WEBGL=true;
-     tf.ENV.flags.WEBGL_VERSION=2;
-     tf.ENV.flags.SOFTWARE_WEBGL_ENABLED = true;
-     tf.ENV.flags.IS_SAFARI = false;
-    
-     tf.setBackend('webgl')
-     class WordPieceTokenizer {
-          constructor(vocabulary, unknownToken = '[UNK]', suffixIndicator = '##') {
-            this.vocabulary = new Set(vocabulary);
-            this.unknownToken = unknownToken;
-            this.suffixIndicator = suffixIndicator;
-          }
+        try {
+          //    await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core");
+          //   await import("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl");
+          tf.ENV.flags.HAS_WEBGL = true;
+          tf.ENV.flags.WEBGL_VERSION = 2;
+          tf.ENV.flags.SOFTWARE_WEBGL_ENABLED = true;
+          tf.ENV.flags.IS_SAFARI = false;
 
-          tokenize(text) {
-            const tokens = [];
-            // Normalize text and split into words, removing empty strings.
-            const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-
-            for (const word of words) {
-              let subwordTokens = [];
-              let remainingWord = word;
-              let isUnknown = false;
-
-              // Greedily find the longest matching subword
-              while (remainingWord.length > 0) {
-                let longestMatch = '';
-                let matchLength = 0;
-
-                for (let i = remainingWord.length; i > 0; i--) {
-                  let candidate = remainingWord.substring(0, i);
-
-                  // The first token of a word should not have the suffix indicator
-                  if (subwordTokens.length > 0) {
-                    candidate = this.suffixIndicator + candidate;
-                  }
-
-                  if (this.vocabulary.has(candidate)) {
-                    longestMatch = candidate;
-                    matchLength = i;
-                    break; // Found the longest match, move on
-                  }
-                }
-
-                if (longestMatch.length > 0) {
-                  subwordTokens.push(longestMatch);
-                  remainingWord = remainingWord.substring(matchLength);
-                } else {
-                  // No match found for the current remaining part of the word
-                  isUnknown = true;
-                  break;
-                }
-              }
-
-              if (isUnknown) {
-                tokens.push(this.unknownToken);
-              } else {
-                tokens.push(...subwordTokens);
-              }
+          tf.setBackend('webgl')
+          class WordPieceTokenizer {
+            constructor(vocabulary, unknownToken = '[UNK]', suffixIndicator = '##') {
+              this.vocabulary = new Set(vocabulary);
+              this.unknownToken = unknownToken;
+              this.suffixIndicator = suffixIndicator;
             }
-            return tokens;
+
+            tokenize(text) {
+              const tokens = [];
+              // Normalize text and split into words, removing empty strings.
+              const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+
+              for (const word of words) {
+                let subwordTokens = [];
+                let remainingWord = word;
+                let isUnknown = false;
+
+                // Greedily find the longest matching subword
+                while (remainingWord.length > 0) {
+                  let longestMatch = '';
+                  let matchLength = 0;
+
+                  for (let i = remainingWord.length; i > 0; i--) {
+                    let candidate = remainingWord.substring(0, i);
+
+                    // The first token of a word should not have the suffix indicator
+                    if (subwordTokens.length > 0) {
+                      candidate = this.suffixIndicator + candidate;
+                    }
+
+                    if (this.vocabulary.has(candidate)) {
+                      longestMatch = candidate;
+                      matchLength = i;
+                      break; // Found the longest match, move on
+                    }
+                  }
+
+                  if (longestMatch.length > 0) {
+                    subwordTokens.push(longestMatch);
+                    remainingWord = remainingWord.substring(matchLength);
+                  } else {
+                    // No match found for the current remaining part of the word
+                    isUnknown = true;
+                    break;
+                  }
+                }
+
+                if (isUnknown) {
+                  tokens.push(this.unknownToken);
+                } else {
+                  tokens.push(...subwordTokens);
+                }
+              }
+              return tokens;
+            }
           }
-        }
 
+          async function fetchText() {
+            return await (await fetch(...arguments)).text();
+          }
 
-        async function fetchText() {
-          return await (await fetch(...arguments)).text();
-        }
+          const getVocab = async () => {
+            let text = String(await fetchText('vocab.txt'));
+            text = `${text}\n${text.toLowerCase()}`;
+            return [...new Set(text.split('\n').map(x => x.trim()).filter(x => x))];
+          };
 
-        const getVocab = async () => {
-          let text = String(await fetchText('vocab.txt'));
-          text = `${text}\n${text.toLowerCase()}`;
-          return [...new Set(text.split('\n').map(x => x.trim()).filter(x => x))];
-        };
+          let model;
+          const maskToken = '[MASK]';
+          const maskId = 103; // BERT base uncased and DistilBERT use 103 for [MASK]
 
-        let model;
-        const maskToken = '[MASK]';
-        const maskId = 103; // BERT base uncased and DistilBERT use 103 for [MASK]
+          // Minimal vocab
+          const invVocab = await getVocab();
+          console.log({
+            invVocab
+          });
+          const vocab = {};
+          for (let i = 0; i < invVocab.length; i++) {
+            vocab[invVocab[i]] = i;
+          }
+          console.log({
+            vocab
+          });
 
-        // Minimal vocab
-        const invVocab = await getVocab();
-        console.log({invVocab});
-        const vocab = {};
-        for(let i = 0;i<invVocab.length;i++){
-          vocab[invVocab[i]] = i;
-        }
-        console.log({vocab});
+          const tokenizer = new WordPieceTokenizer(invVocab);
 
-        const tokenizer = new WordPieceTokenizer(invVocab);
+          function tokenize(text) {
+            return tokenizer.tokenize(text);
+          }
 
-        function tokenize(text) {
-          return tokenizer.tokenize(text);
-        }
-
-        async function loadModel() {
-          try{
-            tf.setBackend('webgl');
-            await tf.ready();
-            model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
-            document.getElementById('output').textContent = 'Model loaded.';
-          } catch (e) {
-            document.getElementById('output').textContent += '\n' + e.message;
-            console.error(e);
-            try{
-              return;
-              tf.setBackend('cpu');
+          async function loadModel() {
+            try {
+              tf.setBackend('webgl');
               await tf.ready();
               model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
               document.getElementById('output').textContent = 'Model loaded.';
             } catch (e) {
               document.getElementById('output').textContent += '\n' + e.message;
               console.error(e);
-            }
-        }
-
-        const loaded = loadModel();
-
-        async function run() {
-          try {
-            await loaded;
-            const text = document.getElementById('text').value;
-            const tokens = tokenize(text);
-            console.log({tokens});
-            const inputIdsArray = tokens.map(x => vocab[x]);
-            console.log({ inputIdsArray });
-            const inputIds = tf.tensor([inputIdsArray], undefined, 'int32');
-            console.log({inputIds});
-            const attentionMask = tf.tensor([inputIdsArray.map(() => 1)], undefined, 'int32');
-
-            const result = await model.executeAsync({
-              'input_ids': inputIds,
-              'attention_mask': attentionMask
-            });
-            const resultArray = result.arraySync();
-            console.log({ resultArray });
-            const logits = resultArray[0]; // [seq_len, vocab_size]
-            const maskIndex = inputIdsArray.indexOf(maskId);
-            let maskLogits = logits[maskIndex];
-            if (!maskLogits) {
-              console.log(`${maskIndex} not found`);
-              maskLogits = logits[0];// fallback if not found
+              try {
+                return;
+                tf.setBackend('cpu');
+                await tf.ready();
+                model = await tf.loadGraphModel('./distilbert-tfjs/model.json');
+                document.getElementById('output').textContent = 'Model loaded.';
+              } catch (e) {
+                document.getElementById('output').textContent += '\n' + e.message;
+                console.error(e);
+              }
             }
 
-            const top5 = [...maskLogits.map((score, id) => ({ id, score }))]
-              .sort((a, b) => b.score - a.score).filter(({ id }) => invVocab[id]).slice(0, 5)
-              .map(({ id, score }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
-              .join('\n');
+            const loaded = loadModel();
 
-            document.getElementById('output').textContent = top5;
+            async function run() {
+              try {
+                await loaded;
+                const text = document.getElementById('text').value;
+                const tokens = tokenize(text);
+                console.log({
+                  tokens
+                });
+                const inputIdsArray = tokens.map(x => vocab[x]);
+                console.log({
+                  inputIdsArray
+                });
+                const inputIds = tf.tensor([inputIdsArray], undefined, 'int32');
+                console.log({
+                  inputIds
+                });
+                const attentionMask = tf.tensor([inputIdsArray.map(() => 1)], undefined, 'int32');
+
+                const result = await model.executeAsync({
+                  'input_ids': inputIds,
+                  'attention_mask': attentionMask
+                });
+                const resultArray = result.arraySync();
+                console.log({
+                  resultArray
+                });
+                const logits = resultArray[0]; // [seq_len, vocab_size]
+                const maskIndex = inputIdsArray.indexOf(maskId);
+                let maskLogits = logits[maskIndex];
+                if (!maskLogits) {
+                  console.log(`${maskIndex} not found`);
+                  maskLogits = logits[0]; // fallback if not found
+                }
+
+                const top5 = [...maskLogits.map((score, id) => ({
+                    id,
+                    score
+                  }))]
+                  .sort((a, b) => b.score - a.score).filter(({
+                    id
+                  }) => invVocab[id]).slice(0, 5)
+                  .map(({
+                    id,
+                    score
+                  }) => `${invVocab[id] ?? '[UNK]'} (${score.toFixed(3)})`)
+                  .join('\n');
+
+                document.getElementById('output').textContent = top5;
+              } catch (e) {
+                document.getElementById('output').textContent += '\n' + e.message;
+              }
+            }
+
+            document.getElementById('predict').addEventListener('click', run);
           } catch (e) {
             document.getElementById('output').textContent += '\n' + e.message;
+            console.error(e);
           }
-        }
 
-        document.getElementById('predict').addEventListener('click', run);
-      } catch (e) {
-        document.getElementById('output').textContent += '\n' + e.message;
-        console.error(e);
-      }
+        })();
 
-    })();
   </script>
 </body>
 
